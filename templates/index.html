@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SciWrite AI - Academic Paper Generator</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --bg: #f8fafc;
+            --surface: #ffffff;
+            --text: #1e293b;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+            --danger: #ef4444;
+            --radius: 8px;
+            --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        
+        body {
+            font-family: var(--font);
+            background-color: var(--bg);
+            color: var(--text);
+            line-height: 1.5;
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Layout */
+        .sidebar {
+            width: 320px;
+            background: var(--surface);
+            border-right: 1px solid var(--border);
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            flex-shrink: 0;
+        }
+
+        .main-content {
+            flex-grow: 1;
+            padding: 32px;
+            max-width: 900px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        /* Typography & Components */
+        h1, h2, h3 { font-weight: 600; color: var(--text); }
+        h1 { font-size: 1.5rem; margin-bottom: 8px; color: var(--primary); }
+        h2 { font-size: 1.25rem; margin-bottom: 16px; border-bottom: 2px solid var(--border); padding-bottom: 8px;}
+        label { font-weight: 500; font-size: 0.9rem; margin-bottom: 6px; display: block; }
+        
+        input[type="text"], input[type="number"], input[type="password"], select, textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            font-family: var(--font);
+            font-size: 0.95rem;
+            transition: border-color 0.2s;
+        }
+        
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        textarea { resize: vertical; min-height: 100px; }
+
+        .form-group { margin-bottom: 16px; }
+        .row { display: flex; gap: 16px; }
+        .row > * { flex: 1; }
+
+        button {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 10px 16px;
+            border-radius: var(--radius);
+            font-size: 0.95rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        button:hover { background-color: var(--primary-hover); }
+        button.secondary { background-color: white; color: var(--text); border: 1px solid var(--border); }
+        button.secondary:hover { background-color: var(--bg); }
+        button.danger { background-color: white; color: var(--danger); border: 1px solid var(--border); }
+        button.danger:hover { background-color: #fef2f2; border-color: var(--danger); }
+
+        /* Tabs */
+        .tabs { display: flex; gap: 8px; border-bottom: 1px solid var(--border); margin-bottom: 24px; }
+        .tab {
+            padding: 10px 16px;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+        .tab.active { border-bottom-color: var(--primary); color: var(--primary); }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        /* Author Cards */
+        .author-card {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            padding: 16px;
+            border-radius: var(--radius);
+            margin-bottom: 16px;
+            display: flex;
+            gap: 16px;
+            align-items: flex-start;
+        }
+        .author-fields { flex-grow: 1; display: flex; flex-direction: column; gap: 12px; }
+
+        /* Generate Section */
+        .generate-section {
+            background: var(--surface);
+            padding: 24px;
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            margin-top: 32px;
+            text-align: center;
+        }
+        
+        .generate-btn { font-size: 1.1rem; padding: 14px 32px; width: 100%; max-width: 300px; }
+
+        /* Overlay & Loader */
+        #loader-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(255, 255, 255, 0.9);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            z-index: 9999;
+        }
+        .spinner {
+            width: 40px; height: 40px;
+            border: 4px solid var(--border);
+            border-top: 4px solid var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 16px;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* Error Banner */
+        #error-banner {
+            display: none;
+            background: #fef2f2;
+            color: var(--danger);
+            border: 1px solid #fca5a5;
+            padding: 12px;
+            border-radius: var(--radius);
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+
+    <aside class="sidebar">
+        <div>
+            <h1>SciWrite AI</h1>
+            <p style="color: var(--text-muted); font-size: 0.85rem;">Production Paper Generator</p>
+        </div>
+        
+        <div class="form-group">
+            <label>Target Venue / Journal</label>
+            <input type="text" id="venue" value="Custom / Unspecified" placeholder="e.g., IEEE, Nature, NeurIPS">
+        </div>
+
+        <div class="form-group">
+            <label>Gemini API Key</label>
+            <input type="password" id="api_key" placeholder="Enter your Gemini API key" autocomplete="off">
+        </div>
+
+        <div class="form-group">
+            <label>Layout Style</label>
+            <select id="layout">
+                <option value="single">Single Column</option>
+                <option value="double">Double Column</option>
+            </select>
+        </div>
+
+        <div class="row">
+            <div class="form-group">
+                <label>Length Mode</label>
+                <select id="length_mode">
+                    <option value="pages">Pages</option>
+                    <option value="words">Words</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Value</label>
+                <input type="number" id="length_val" value="4" min="1">
+            </div>
+        </div>
+
+        <div style="margin-top: auto; padding-top: 20px; border-top: 1px solid var(--border); font-size: 0.8rem; color: var(--text-muted);">
+            <p><strong>Word Count Estimates:</strong></p>
+            <p>Single Col: ~450 words/page</p>
+            <p>Double Col: ~600 words/page</p>
+        </div>
+    </aside>
+
+    <main class="main-content">
+        <div id="error-banner"></div>
+
+        <div class="form-group">
+            <label>Paper Title</label>
+            <input type="text" id="title" value="Untitled Paper" placeholder="Enter paper title...">
+        </div>
+        
+        <div class="form-group">
+            <label>Keywords</label>
+            <input type="text" id="keywords" placeholder="e.g., Machine Learning, Neural Networks, AI">
+        </div>
+
+        <div class="tabs">
+            <div class="tab active" onclick="switchTab('context')">Research Context</div>
+            <div class="tab" onclick="switchTab('authors')">Authors</div>
+            <div class="tab" onclick="switchTab('biblio')">Bibliography & Figures</div>
+        </div>
+
+        <div id="tab-context" class="tab-content active">
+            <h2>Research Context & Notes</h2>
+            <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 16px;">Provide bullet points or rough notes. The AI will expand these into academic prose.</p>
+            
+            <div class="form-group">
+                <label>Abstract / Core Idea</label>
+                <textarea id="note-abstract" placeholder="What is the core contribution of this paper?"></textarea>
+            </div>
+            <div class="form-group">
+                <label>Introduction Background</label>
+                <textarea id="note-intro" placeholder="Background context and problem statement..."></textarea>
+            </div>
+            <div class="form-group">
+                <label>Methodology</label>
+                <textarea id="note-method" placeholder="Describe your dataset, algorithms, or experimental setup..."></textarea>
+            </div>
+            <div class="form-group">
+                <label>Results & Analysis</label>
+                <textarea id="note-results" placeholder="Provide raw data or findings. E.g., 'Model achieved 95% accuracy outperforming baseline by 10%'"></textarea>
+            </div>
+            <div class="form-group">
+                <label>Extra Notes (Discussion/Conclusion)</label>
+                <textarea id="note-extra" placeholder="Future work, limitations, or general formatting rules..."></textarea>
+            </div>
+        </div>
+
+        <div id="tab-authors" class="tab-content">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                <h2>Author Configuration</h2>
+                <button class="secondary" type="button" onclick="addAuthor()">+ Add Author</button>
+            </div>
+            <div id="author-list"></div>
+        </div>
+
+        <div id="tab-biblio" class="tab-content">
+            <h2>Additional Bibliography (BibTeX)</h2>
+            <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 8px;">The system automatically fetches arXiv literature. Add custom citations here.</p>
+            <div class="form-group">
+                <textarea id="bibtex" placeholder="@article{...}" style="font-family: monospace; height: 150px;"></textarea>
+            </div>
+
+            <h2 style="margin-top: 32px;">Figures & Assets</h2>
+            <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 8px;">Upload images to include in the paper. The AI will attempt to generate one analytical chart automatically if 'Results' data is provided.</p>
+            <div class="form-group">
+                <input type="file" id="figures" multiple accept="image/*" style="padding: 10px 0;">
+            </div>
+        </div>
+
+        <div class="generate-section">
+            <h2 style="border: none; margin-bottom: 8px;">Compile Document</h2>
+            <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 24px;">Generates LaTeX source, AI text, bibliography, and compiles assets into a ZIP file.</p>
+            <button class="generate-btn" id="generate-btn" onclick="generatePaper()">Generate & Download ZIP</button>
+        </div>
+    </main>
+
+    <div id="loader-overlay">
+        <div class="spinner"></div>
+        <h2 style="border: none;">Synthesizing Academic Paper...</h2>
+        <p style="color: var(--text-muted);">This requires multiple LLM executions and may take 20 - 60 seconds.</p>
+    </div>
+
+    <script>
+        // --- Tab Logic ---
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            
+            event.target.classList.add('active');
+            document.getElementById('tab-' + tabId).classList.add('active');
+        }
+
+        // --- Authors Logic ---
+        let authorCount = 0;
+        function addAuthor() {
+            authorCount++;
+            const id = `author-${authorCount}`;
+            const html = `
+                <div class="author-card" id="${id}">
+                    <div class="author-fields">
+                        <input type="text" class="auth-name" placeholder="Author Name (e.g. Jane Doe)">
+                        <input type="text" class="auth-affil" placeholder="Affiliation (e.g. University of Science)">
+                        <input type="text" class="auth-email" placeholder="Email Address">
+                    </div>
+                    <button class="danger" onclick="document.getElementById('${id}').remove()">Remove</button>
+                </div>
+            `;
+            document.getElementById('author-list').insertAdjacentHTML('beforeend', html);
+        }
+
+        function getAuthorsJSON() {
+            const authors = [];
+            document.querySelectorAll('.author-card').forEach(card => {
+                authors.push({
+                    name: card.querySelector('.auth-name').value,
+                    affil: card.querySelector('.auth-affil').value,
+                    email: card.querySelector('.auth-email').value
+                });
+            });
+            return JSON.stringify(authors);
+        }
+
+        // --- Generate Logic ---
+        async function generatePaper() {
+            const btn = document.getElementById('generate-btn');
+            const overlay = document.getElementById('loader-overlay');
+            const errorBanner = document.getElementById('error-banner');
+            
+            errorBanner.style.display = 'none';
+            overlay.style.display = 'flex';
+            
+            const formData = new FormData();
+            formData.append('title', document.getElementById('title').value);
+            formData.append('keywords', document.getElementById('keywords').value);
+            formData.append('venue', document.getElementById('venue').value);
+            formData.append('api_key', document.getElementById('api_key').value.trim());
+            formData.append('layout', document.getElementById('layout').value);
+            formData.append('length_mode', document.getElementById('length_mode').value);
+            formData.append('length_val', document.getElementById('length_val').value);
+            formData.append('bibtex', document.getElementById('bibtex').value);
+            
+            formData.append('authors', getAuthorsJSON());
+            
+            const notes = {
+                abstract: document.getElementById('note-abstract').value,
+                intro: document.getElementById('note-intro').value,
+                method: document.getElementById('note-method').value,
+                results: document.getElementById('note-results').value,
+                extra: document.getElementById('note-extra').value
+            };
+            formData.append('notes', JSON.stringify(notes));
+
+            const files = document.getElementById('figures').files;
+            for(let i=0; i<files.length; i++) {
+                formData.append('figures', files[i]);
+            }
+
+            try {
+                const response = await fetch('/api/generate', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Failed to generate paper');
+                }
+
+                // Handle file download
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                a.download = 'sciwrite_project.zip';
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                
+            } catch (err) {
+                errorBanner.textContent = "Error: " + err.message;
+                errorBanner.style.display = 'block';
+                window.scrollTo(0,0);
+            } finally {
+                overlay.style.display = 'none';
+            }
+        }
+
+        // Initialize with one author field
+        addAuthor();
+    </script>
+</body>
+</html>
